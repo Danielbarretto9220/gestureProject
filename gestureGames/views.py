@@ -15,9 +15,9 @@ def trex(request):
 
 def gen2(camera2):
     while True:
-        frame = camera2.get_frame()
+        frame2 = camera2.get_frame()
         yield (b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+                b'Content-Type: image/jpeg\r\n\r\n' + frame2 + b'\r\n\r\n')
 
 def video_stream2(request):
     return StreamingHttpResponse(gen2(VideoCamera2()),
