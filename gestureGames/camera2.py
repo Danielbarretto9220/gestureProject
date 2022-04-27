@@ -15,7 +15,7 @@ class VideoCamera2(object):
         self.cap.release()
     def get_frame(self):
         ret, frame = self.cap.read()
-        processed_frame = self.mainobj.mainLoop(frame)
+        processed_frame = self.mainobj.game(frame)
         ret, frame = cv2.imencode('.jpg', processed_frame)
         return frame.tobytes()
 
@@ -77,35 +77,35 @@ class trex:
                         w, h)
                     
                     if index_tip is not None:
-                        if check_cnt==self.check_every:
+                        if self.check_cnt==self.check_every:
                             if index_tip is not None and middle_tip is not None:
 
                                 
                                 if euclidean(index_tip, middle_tip)<65: # 60 should be relative to the height of frame
-                                    last_event = "jump"
+                                    self.last_event = "jump"
                                 else:
-                                    if last_event=="jump":
-                                        last_event=None
+                                    if self.last_event=="jump":
+                                        self.last_event=None
                             
                             if thumb_tip is not None and index_tip is not None:
                                 #print(euclidean(index_tip, middle_tip))
                                 if euclidean(thumb_tip, index_tip) < 60:
-                                    last_event="duck"
+                                    self.last_event="duck"
                                 else:
-                                    if last_event == "duck":
-                                        last_event = None
-                            check_cnt=0
+                                    if self.last_event == "duck":
+                                        self.last_event = None
+                            self.check_cnt=0
                     
-                    if check_cnt==0:
-                        if last_event=="jump":
+                    if self.check_cnt==0:
+                        if self.last_event=="jump":
                             keyboard.press_and_release("space")
-                        elif last_event=="duck":
+                        elif self.last_event=="duck":
                             keyboard.press("down")
                         else:
                             keyboard.release("down")
                         #print(last_event)
 
-                    check_cnt+=1
+                    self.check_cnt+=1
 
                     self.mp_drawing.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS,
                     self.mp_drawing.DrawingSpec(color=(121, 22, 76), thickness=2, circle_radius=4),
