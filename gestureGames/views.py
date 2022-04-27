@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.http.response import StreamingHttpResponse
 from gestureGames.camera import VideoCamera
-from gestureProject.gestureGames.camera2 import VideoCamera2
+from gestureGames.camera2 import VideoCamera2
 # Create your views here.
 
 def home(request):
