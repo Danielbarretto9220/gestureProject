@@ -3,8 +3,10 @@ from django.http import HttpResponse
 from django.http.response import StreamingHttpResponse
 from gestureGames.camera import VideoCamera
 from gestureGames.camera2 import VideoCamera2
-# Create your views here.
+from gestureGames.camera3 import VideoCamera3
+from gestureGames.camera4 import VideoCamera4
 
+# Create your views here.
 def home(request):
     return render(request, 'Home.html')
 
@@ -37,3 +39,29 @@ def video_stream(request):
     return StreamingHttpResponse(gen(VideoCamera()),
                     content_type='multipart/x-mixed-replace; boundary=frame')
 
+# Hand Criket 
+def hc(request):
+    return render(request, 'hc.html')
+
+def gen3(camera3):
+    while True:
+        frame3 = camera3.get_frame()
+        yield (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + frame3 + b'\r\n\r\n')
+def video_stream3(request):
+    return StreamingHttpResponse(gen3(VideoCamera3()),
+                    content_type='multipart/x-mixed-replace; boundary=frame')
+
+
+# Rock Paper Sicssors
+def rps(request):
+    return render(request, 'rps.html')
+
+def gen4(camera4):
+    while True:
+        frame = camera4.get_frame()
+        yield (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+def video_stream4(request):
+    return StreamingHttpResponse(gen4(VideoCamera4()),
+                    content_type='multipart/x-mixed-replace; boundary=frame')
