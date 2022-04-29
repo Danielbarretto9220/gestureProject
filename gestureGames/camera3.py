@@ -280,6 +280,7 @@ class Game(object):
         self.th1 = ThreadWithReturnValue(target=self.game_main)
         self.th2 = ThreadWithReturnValue(target=self.ret_frame)
         self.queue = Queue()
+        self.processed_frame =''
 
     def __del__(self):
         self.cap.release()
@@ -294,17 +295,16 @@ class Game(object):
         return self.flag
 
     def ret_frame(self):
-        #while True:
-        ret, enframe = cv2.imencode('.jpg', self.processed_frame)
-        #enframe = enframe.tobytes()
-        enframe = enframe.tobytes()
-        if enframe:
-            self.queue.enque(enframe)
-            print("Message: enframes enquied.")
-        #return enframe
-            #print(enframe)
-            #yield (b'--frame\r\n'
-             #       b'Content-Type: image/jpeg\r\n\r\n' + enframe + b'\r\n\r\n')
+        #print("Message: enframes enquied.")
+        
+        if self.processed_frame:
+            ret, enframe = cv2.imencode('.jpg', self.processed_frame)
+            enframe = enframe.tobytes()
+            if enframe:
+                self.queue.enque(enframe)
+                #print("Message: enframes enquied.")
+        
+
 
     def play(self):
         delay = 0
@@ -319,7 +319,7 @@ class Game(object):
  
             icon = cv2.imread('gestureGames/static/1-6.jpg')
             icon = cv2.resize(icon, (640,120))
-            img[0:120, 0:] = icon
+            #img[0:120, 0:] = icon
 
             font_style = cv2.FONT_HERSHEY_PLAIN
             user = None
@@ -390,7 +390,7 @@ class Game(object):
 
             #cv2.imshow('Hand Cricket', img)
             self.processed_frame = img
-            self.ret_frame()
+            #self.ret_frame()
             temp = 0
             while(temp < 10000 and user == computer):
                 temp += 1
@@ -405,7 +405,6 @@ class Game(object):
             #break
             #self.ret_frame()
             
-
 
     def game_main(self):
         print("Message from cam3: In Game_Main")

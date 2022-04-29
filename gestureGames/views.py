@@ -45,18 +45,15 @@ def hc(request):
     return render(request, 'hc.html')
 
 def gen3(camera3):
-    obj = camera3.game_main()
-    obj.th1.start()
-    obj.th1.join()
-    while True:
-        print("Message from gen3: In While")
-        obj.th2.start()
-        obj.th2.join()
-        flag = obj.queue.isEmpty()
-        if flag:
-            pass
-        else:
-            frame3 = obj.queue.dequeue()
+    #obj = camera3.game_main()
+    camera3.th1.start()
+    flag = 0
+    camera3.th2.start()
+    while flag ==0:
+        flag = camera3.queue.isEmpty()
+        if not flag:
+            print("Message from gen3: In Flag")
+            frame3 = camera3.queue.dequeue()
             yield (b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + frame3 + b'\r\n\r\n')
     #obj.th1.join()
