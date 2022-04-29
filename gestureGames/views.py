@@ -45,15 +45,24 @@ def hc(request):
     return render(request, 'hc.html')
 
 def gen3(camera3):
-    camera3.game_main()
-    #flag = camera3.get_flag()
-    #while flag:
-     #   camera3.game_main()
-        #frame3 = camera3.get_frame()
-        #yield (b'--frame\r\n'
-         #       b'Content-Type: image/jpeg\r\n\r\n' + frame3 + b'\r\n\r\n')
+    obj = camera3.game_main()
+    obj.th1.start()
+    obj.th1.join()
+    while True:
+        print("Message from gen3: In While")
+        obj.th2.start()
+        obj.th2.join()
+        flag = obj.queue.isEmpty()
+        if flag:
+            pass
+        else:
+            frame3 = obj.queue.dequeue()
+            yield (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + frame3 + b'\r\n\r\n')
+    #obj.th1.join()
+
 def video_stream3(request):
-    return StreamingHttpResponse(repr(Game()),
+    return StreamingHttpResponse(gen3(Game()),
                     content_type='multipart/x-mixed-replace; boundary=frame')
 
 

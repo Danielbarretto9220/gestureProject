@@ -4,7 +4,81 @@ import mediapipe as mp
 import cv2
 import random
 import os
+from threading import Thread
 
+#global queue
+
+class Queue(object):
+ 
+    def __init__(self):
+        self.item = []
+ 
+    def __str__(self):
+        return "{}".format(self.item)
+ 
+    def __repr__(self):
+        return "{}".format(self.item)
+ 
+    def enque(self, item):
+        """
+        Insert the elements in queue
+        :param item: Any
+        :return: Bool
+        """
+        self.item.insert(0, item)
+        return True
+ 
+    def size(self):
+        """
+        Return the size of queue
+        :return: Int
+        """
+        return len(self.item)
+ 
+    def dequeue(self):
+        """
+        Return the elements that came first
+        :return: Any
+        """
+        if self.size() == 0:
+            return None
+        else:
+            return self.item.pop()
+ 
+    def peek(self):
+        """
+        Check the Last elements
+        :return: Any
+        """
+        if self.size() == 0:
+            return None
+        else:
+            return self.item[-1]
+ 
+    def isEmpty(self):
+        """
+        Check is the queue is empty
+        :return: bool
+        """
+        if self.size() == 0:
+            return True
+        else:
+            return False
+
+class ThreadWithReturnValue(Thread):
+    def __init__(self, group=None, target=None, name=None,
+                 args=(), kwargs={}, Verbose=None):
+        Thread.__init__(self, group, target, name, args, kwargs)
+        self._return = None
+    def run(self):
+        print(type(self._target))
+        if self._target is not None:
+            self._return = self._target(*self._args,
+                                                **self._kwargs)
+    def join(self, *args):
+        Thread.join(self, *args)
+        return self._return
+        
 # Class of Finer Recognition
 class FingerRecognition:
 
@@ -203,24 +277,34 @@ class Game(object):
         self.thumbs_up = False
         self.start = True
         self.flag = True
-        self.game_main()
+        self.th1 = ThreadWithReturnValue(target=self.game_main)
+        self.th2 = ThreadWithReturnValue(target=self.ret_frame)
+        self.queue = Queue()
 
     def __del__(self):
         self.cap.release()
+    '''   
     def __repr__(self):
         ret, enframe = cv2.imencode('.jpg', self.processed_frame)
         enframe = enframe.tobytes()
         return (b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + enframe + b'\r\n\r\n')
-
+    ''' 
     def get_flag(self):
         return self.flag
-        
+
     def ret_frame(self):
+        #while True:
         ret, enframe = cv2.imencode('.jpg', self.processed_frame)
-        enframe = enframe.tobytes() 
-        yield (b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n' + enframe + b'\r\n\r\n')
+        #enframe = enframe.tobytes()
+        enframe = enframe.tobytes()
+        if enframe:
+            self.queue.enque(enframe)
+            print("Message: enframes enquied.")
+        #return enframe
+            #print(enframe)
+            #yield (b'--frame\r\n'
+             #       b'Content-Type: image/jpeg\r\n\r\n' + enframe + b'\r\n\r\n')
 
     def play(self):
         delay = 0
@@ -306,6 +390,7 @@ class Game(object):
 
             #cv2.imshow('Hand Cricket', img)
             self.processed_frame = img
+            self.ret_frame()
             temp = 0
             while(temp < 10000 and user == computer):
                 temp += 1
@@ -323,7 +408,7 @@ class Game(object):
 
 
     def game_main(self):
-
+        print("Message from cam3: In Game_Main")
         def HandCricket(batting, innings, target):
                 current = 0
                 self.current= current
