@@ -1,28 +1,9 @@
 #Importing necessary libraries
+
 import mediapipe as mp
 import cv2
 import random
 import os
-
-class VideoCamera3(object):
-    def __init__(self):
-        self.cap = cv2.VideoCapture(0)
-        self.mainobj = Game()
-        self.mainobj.game_main(self.get_first_frame())
-
-    def __del__(self):
-        self.cap.release()
-        
-    def get_frame(self):
-        ret, frame = self.cap.read()
-        processed_frame = self.mainobj.play(frame)
-        ret, frame = cv2.imencode('.jpg', processed_frame)
-        return frame.tobytes()
-
-    def get_first_frame(self):
-        ret, frame = self.cap.read()
-        return frame
-
 
 # Class of Finer Recognition
 class FingerRecognition:
@@ -35,7 +16,6 @@ class FingerRecognition:
         #Setting up hand functions for video
         self.hands_video = self.mp_hands.Hands(static_image_mode = False, max_num_hands = 1, 
                                                 min_detection_confidence = 0.8, min_tracking_confidence = 0.8)
-
     
     def detectHandLandmarks(self, img, draw = False, display = True):
         output = img.copy()    # Image Copy for output
@@ -175,7 +155,7 @@ class FingerRecognition:
             else:
                 final_count = None
 
-        folderPath = "static/resources"
+        folderPath = "gestureGames/resources"
         my_list = os.listdir(folderPath)
         overlay = []
 
@@ -207,9 +187,11 @@ class FingerRecognition:
 
         return output, finger_count, final_count
 
-class Game:
+class Game(object):
     def __init__(self):
-        #self.cap = cv2.VideoCapture(0)    #access webcam 
+        self.cap = cv2.VideoCapture(0) 
+        #self.processed_frame = self.cap.read() 
+        #self.processed_frame = cv2.flip(self.processed_frame, 1)   #access webcam 
         self.run = []
         self.target = 0
         self.current = 0
@@ -220,107 +202,127 @@ class Game:
         self.thumbs_down = False
         self.thumbs_up = False
         self.start = True
-        #self.icon = cv2.imread('1-6.jpg')
-    
-    def play(self,frame):
+        self.flag = True
+        self.game_main()
+
+    def __del__(self):
+        self.cap.release()
+    def __repr__(self):
+        ret, enframe = cv2.imencode('.jpg', self.processed_frame)
+        enframe = enframe.tobytes()
+        return (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + enframe + b'\r\n\r\n')
+
+    def get_flag(self):
+        return self.flag
+        
+    def ret_frame(self):
+        ret, enframe = cv2.imencode('.jpg', self.processed_frame)
+        enframe = enframe.tobytes() 
+        yield (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + enframe + b'\r\n\r\n')
+
+    def play(self):
         delay = 0
         text = ""
         computer = random.randint(1, 6)
         finger = FingerRecognition()
 
-        #mainLoop
-        #while True:
-        #ret, img = self.cap.read()     # read the image
-        img = frame
-        img = cv2.flip(img, 1)    #Flipping the image
-        #print(img.shape)
+        while True:
+            ret, img = self.cap.read()     # read the image
+            #img = self.processed_frame
+            img = cv2.flip(img, 1)    #Flipping the image
+ 
+            icon = cv2.imread('gestureGames/static/1-6.jpg')
+            icon = cv2.resize(icon, (640,120))
+            img[0:120, 0:] = icon
 
-        self.path = r'gestureGames/static/1-6.jpg'
-        self.icon = cv2.imread(self.path)
-        self.icon = cv2.resize(self.icon, (640,120))
-        img[0:120, 0:] = self.icon
+            font_style = cv2.FONT_HERSHEY_PLAIN
+            user = None
+                    
+            if delay >= 0 and delay <= 20:
+                text = "Ready?"
+            elif delay < 40:
+                text = "Set!"
+            elif delay < 85:
+                text = "Show your run now!"
+                img, results = finger.detectHandLandmarks(img, draw = False, display = True)  #Detecting hand landmarks
 
-        font_style = cv2.FONT_HERSHEY_PLAIN
-        user = None
-                
-        if delay >= 0 and delay <= 20:
-            text = "Ready?"
-        elif delay < 40:
-            text = "Set!"
-        elif delay < 85:
-            text = "Show your run now!"
-            img, results = finger.detectHandLandmarks(img, draw = False, display = True)  #Detecting hand landmarks
+                if results.multi_hand_landmarks:   #Counting the fingers
+                    img, finger_count, final_count = finger.countFingers(img, results, computer, start = self.start, replay = self.replay, draw = True, display = True) 
 
-            if results.multi_hand_landmarks:   #Counting the fingers
-                img, finger_count, final_count = finger.countFingers(img, results, computer, start = self.start, replay = self.replay, draw = True, display = True) 
+                    if final_count != None:
+                        text = ""
+                        user = final_count
+                        if computer == final_count:
+                            txt = "stop"
+                        else: 
+                            txt = 'playing'
+                        self.run = [final_count, computer, txt]
+            
+            elif delay < 100:
+                if user == None:
+                    text = "You missed it...Try again!!"
+            
+            delay = (delay + 1) % 100     
 
-                if final_count != None:
-                    text = ""
-                    user = final_count
-                    if computer == final_count:
-                        txt = "stop"
-                    else: 
-                        txt = 'playing'
-                    self.run = [final_count, computer, txt]
-        
-        elif delay < 100:
-            if user == None:
-                text = "You missed it...Try again!!"
-        
-        delay = (delay + 1) % 100     
+            if self.win_status == '':
+                if self.start == True:
+                    text = "   "
+                    cv2.rectangle(img, (0, 0), (640,150), (220,220,220), cv2.FILLED)
+                    cv2.putText(img, "Gesture Cricket",(50, 70), fontFace = 4, fontScale = 2, color = (106,51,170), thickness = 3)
+                    cv2.putText(img, "Do you choose Batting or Bowling?",(30, 110), fontFace = 1, fontScale = 2, color = (106,51,170), thickness = 1)
+                    cv2.putText(img, "Batting (Show 1)",(60, 140), fontFace = 1, fontScale = 1, color = (106,51,170), thickness = 1)
+                    cv2.putText(img, "Bowling (Show 2)",(380, 140), fontFace = 1, fontScale = 1, color = (106,51,170), thickness = 1)
+                else:
+                    alpha = 0.3
+                    over = img.copy()
+                    cv2.rectangle(over, (0, 400), (640,480), (220,220,220), cv2.FILLED)
+                    img = cv2.addWeighted(over, alpha, img, 1-alpha, 0)
+                    cv2.putText(img, text, (20, 160), font_style, 2, (0, 255, 255), 2,2)
+                    cv2.putText(img, 'CURRENT', (100, 420), font_style, 1, (0, 0, 0), 2)
+                    cv2.putText(img, f'{self.current}', (100, 470), font_style, 4, (0, 0, 128), 3)
+                    cv2.putText(img, f'INNINGS {self.innings}', (250, 430), font_style, 2, (0, 0, 0), 2)
+                    cv2.putText(img, f'{self.status}', (250, 470), font_style, 2, (0, 0, 128), 2)
+                    cv2.putText(img, 'TARGET', (500, 420), font_style, 1, (0, 0, 0), 2)
+                    cv2.putText(img, f'{self.target}', (500, 470), font_style, 4, (0, 0, 128), 3)
 
-        if self.win_status == '':
-            if self.start == True:
+            elif self.win_status != "" and self.replay == True:
                 text = "   "
                 cv2.rectangle(img, (0, 0), (640,150), (220,220,220), cv2.FILLED)
-                cv2.putText(img, "Gesture Cricket",(50, 70), fontFace = 4, fontScale = 2, color = (106,51,170), thickness = 3)
-                cv2.putText(img, "Do you choose Batting or Bowling?",(30, 110), fontFace = 1, fontScale = 2, color = (106,51,170), thickness = 1)
-                cv2.putText(img, "Batting (Show 1)",(60, 140), fontFace = 1, fontScale = 1, color = (106,51,170), thickness = 1)
-                cv2.putText(img, "Bowling (Show 2)",(380, 140), fontFace = 1, fontScale = 1, color = (106,51,170), thickness = 1)
-            else:
-                alpha = 0.3
-                over = img.copy()
-                cv2.rectangle(over, (0, 400), (640,480), (220,220,220), cv2.FILLED)
-                img = cv2.addWeighted(over, alpha, img, 1-alpha, 0)
-                cv2.putText(img, text, (20, 160), font_style, 2, (0, 255, 255), 2,2)
-                cv2.putText(img, 'CURRENT', (100, 420), font_style, 1, (0, 0, 0), 2)
-                cv2.putText(img, f'{self.current}', (100, 470), font_style, 4, (0, 0, 128), 3)
-                cv2.putText(img, f'INNINGS {self.innings}', (250, 430), font_style, 2, (0, 0, 0), 2)
-                cv2.putText(img, f'{self.status}', (250, 470), font_style, 2, (0, 0, 128), 2)
-                cv2.putText(img, 'TARGET', (500, 420), font_style, 1, (0, 0, 0), 2)
-                cv2.putText(img, f'{self.target}', (500, 470), font_style, 4, (0, 0, 128), 3)
+                cv2.putText(img, f"{self.win_status}",(70, 80), fontFace = 4, fontScale = 3, color = (128,0,128), thickness = 3)
+                cv2.putText(img, "Try Again (Show Thumbs Up)",(60, 120), fontFace = 1, fontScale = 1, color = (128,0,128), thickness = 1)
+                cv2.putText(img, "Exit (Show Five)",(380, 120), fontFace = 1, fontScale = 1, color = (128,0,128), thickness = 1)
+                    
+            if  user == computer and self.replay == False and self.start == False:
+                cv2.rectangle(img, (0, 190), (640,400), (220,220,220), cv2.FILLED)
+                cv2.putText(img, "OUT!!",(230, 280), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
 
-        elif self.win_status != "" and self.replay == True:
-            text = "   "
-            cv2.rectangle(img, (0, 0), (640,150), (220,220,220), cv2.FILLED)
-            cv2.putText(img, f"{self.win_status}",(70, 80), fontFace = 4, fontScale = 3, color = (128,0,128), thickness = 3)
-            cv2.putText(img, "Try Again (Show Thumbs Up)",(60, 120), fontFace = 1, fontScale = 1, color = (128,0,128), thickness = 1)
-            cv2.putText(img, "Exit (Show Five)",(380, 120), fontFace = 1, fontScale = 1, color = (128,0,128), thickness = 1)
-                
-        if  user == computer and self.replay == False and self.start == False:
-            cv2.rectangle(img, (0, 190), (640,400), (220,220,220), cv2.FILLED)
-            cv2.putText(img, "OUT!!",(230, 280), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
+                if self.innings == 1:
+                    cv2.putText(img, "INNINGS 2",(170, 380), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
+                elif self.innings == 2:
+                    cv2.rectangle(img, (0, 400), (640,480), (220,220,220), cv2.FILLED)
+                    cv2.putText(img, "GAME OVER",(170, 380), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
 
-            if self.innings == 1:
-                cv2.putText(img, "INNINGS 2",(170, 380), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
-            elif self.innings == 2:
-                cv2.rectangle(img, (0, 400), (640,480), (220,220,220), cv2.FILLED)
-                cv2.putText(img, "GAME OVER",(170, 380), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
-
-        #cv2.imshow('Hand Cricket', img)
-
-
-        temp = 0
-        while(temp < 10000 and user == computer):
-            temp += 1
-            text = " "
-        
-        #if delay == 80 and self.run != []:
-         #   break
-        
-        return img
+            #cv2.imshow('Hand Cricket', img)
+            self.processed_frame = img
+            temp = 0
+            while(temp < 10000 and user == computer):
+                temp += 1
+                text = " "
             
-    def game_main(self,frame):
+            if delay == 80 and self.run != []:
+                break
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):          #Closing web cam if key q is pressed.
+                self.cap.release()
+                break
+            #break
+            #self.ret_frame()
+            
+
+
+    def game_main(self):
 
         def HandCricket(batting, innings, target):
                 current = 0
@@ -329,7 +331,7 @@ class Game:
                 if innings == 1:  
                     print("\nINNINGS 1 : \n")
                     print("CURRENT SCORE : ", current, "\n")
-                    self.play(frame)
+                    self.play()
 
                     if self.run != []:
                         runs = self.run
@@ -361,7 +363,7 @@ class Game:
 
                     if batting != "COMPUTER":
                         while(current < target):
-                            self.play(frame)
+                            self.play()
                             if self.run != []:
                                 runs = self.run
                                 self.run = []
@@ -378,7 +380,7 @@ class Game:
                         return(current)
                     else:
                         while(current < target):
-                            self.play(frame)
+                            self.play()
                             if self.run != []:
                                 runs = self.run
                                 self.run = []
@@ -393,16 +395,13 @@ class Game:
                                 print("TARGET SCORE : ", target, "\t\t", "CURRENT SCORE : ", current, "\n")
                         return(current)
 
-        
-        flag = True
-
-        while flag:
+        while self.flag:
             self.win_status = ""
             self.replay = False
 
             ch = 0
             while(ch == 0):
-                self.play(frame)
+                self.play()
                 if self.run[0] == 1:
                     ch = 1
                     break
@@ -469,10 +468,10 @@ class Game:
 
             ch = 0
             while(ch == 0):
-                self.play(frame)
+                self.play()
                 if self.run[0] == 5:
                     ch = 1
-                    flag = False
+                    self.flag = False
                     self.cap.release()
                     break
                 elif self.run[0] == 6:
@@ -486,4 +485,9 @@ class Game:
                     self.replay = False
 
         cv2.destroyAllWindows()
-      
+
+'''   
+if __name__ == "__main__":
+    game = Game()
+    game.game_main()
+'''     
