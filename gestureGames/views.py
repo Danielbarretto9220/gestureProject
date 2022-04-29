@@ -3,7 +3,8 @@ from django.http import HttpResponse
 from django.http.response import StreamingHttpResponse
 from gestureGames.camera import VideoCamera
 from gestureGames.camera2 import VideoCamera2
-from gestureGames.camera3 import VideoCamera3
+#from gestureGames.camera3 import VideoCamera3
+from gestureGames.camera3 import Game
 from gestureGames.camera4 import VideoCamera4
 
 # Create your views here.
@@ -44,12 +45,15 @@ def hc(request):
     return render(request, 'hc.html')
 
 def gen3(camera3):
-    while True:
-        frame3 = camera3.get_frame()
-        yield (b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n' + frame3 + b'\r\n\r\n')
+    camera3.game_main()
+    #flag = camera3.get_flag()
+    #while flag:
+     #   camera3.game_main()
+        #frame3 = camera3.get_frame()
+        #yield (b'--frame\r\n'
+         #       b'Content-Type: image/jpeg\r\n\r\n' + frame3 + b'\r\n\r\n')
 def video_stream3(request):
-    return StreamingHttpResponse(gen3(VideoCamera3()),
+    return StreamingHttpResponse(repr(Game()),
                     content_type='multipart/x-mixed-replace; boundary=frame')
 
 
@@ -62,6 +66,7 @@ def gen4(camera4):
         frame = camera4.get_frame()
         yield (b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+
 def video_stream4(request):
     return StreamingHttpResponse(gen4(VideoCamera4()),
                     content_type='multipart/x-mixed-replace; boundary=frame')
