@@ -45,8 +45,10 @@ def hc(request):
     return render(request, 'hc.html')
 
 def gen3(camera3):
+    #print("Message from gen3: In Flag")
     #obj = camera3.game_main()
     camera3.th1.start()
+    #camera3.th1.join()
     flag = 0
     camera3.th2.start()
     while flag ==0:

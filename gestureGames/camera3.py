@@ -5,6 +5,7 @@ import cv2
 import random
 import os
 from threading import Thread
+from django.http.response import StreamingHttpResponse
 
 #global queue
 
@@ -262,7 +263,7 @@ class FingerRecognition:
         return output, finger_count, final_count
 
 class Game(object):
-    def __init__(self):
+    def __init__(self,request):
         self.cap = cv2.VideoCapture(0) 
         #self.processed_frame = self.cap.read() 
         #self.processed_frame = cv2.flip(self.processed_frame, 1)   #access webcam 
@@ -281,28 +282,31 @@ class Game(object):
         self.th2 = ThreadWithReturnValue(target=self.ret_frame)
         self.queue = Queue()
         self.processed_frame =''
+        self.request = request
 
     def __del__(self):
         self.cap.release()
-    '''   
+      
     def __repr__(self):
-        ret, enframe = cv2.imencode('.jpg', self.processed_frame)
-        enframe = enframe.tobytes()
-        return (b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n' + enframe + b'\r\n\r\n')
-    ''' 
+        return StreamingHttpResponse(self.gen3(),
+                    content_type='multipart/x-mixed-replace; boundary=frame')
+    
     def get_flag(self):
         return self.flag
 
+    def gen3(self):
+        flag = self.queue.isEmpty()
+        if not flag:
+            print("Message from gen3: In Flag")
+            frame3 = self.queue.dequeue()
+            yield (b'--frame\r\n'
+                    b'Content-Type: image/jpeg\r\n\r\n' + frame3 + b'\r\n\r\n')
     def ret_frame(self):
-        #print("Message: enframes enquied.")
-        
-        if self.processed_frame:
-            ret, enframe = cv2.imencode('.jpg', self.processed_frame)
-            enframe = enframe.tobytes()
-            if enframe:
-                self.queue.enque(enframe)
-                #print("Message: enframes enquied.")
+        ret, enframe = cv2.imencode('.jpg', self.processed_frame)
+        enframe = enframe.tobytes()
+        if enframe:
+            self.queue.enque(enframe)
+            print("Message: enframes enquied.")
         
 
 
@@ -403,7 +407,7 @@ class Game(object):
                 self.cap.release()
                 break
             #break
-            #self.ret_frame()
+            self.ret_frame()
             
 
     def game_main(self):
