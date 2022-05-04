@@ -6,11 +6,14 @@ import random               # To obtain random numbers
 import os                   # to fetch contents from a directory
 
 class VideoCamera3(object):
+
     def __init__(self):
         self.cap = cv2.VideoCapture(0)
         self.mainobj = Game()
+
     def __del__(self):
         self.cap.release()
+
     def get_frame(self):
         ret, frame = self.cap.read()
         processed_frame = self.mainobj.play(frame)
@@ -182,6 +185,8 @@ class Game:
         self.out = False
         self.flag_comp = True
         self.computer = 0
+        self.finger = FingerRecognition()                            # Finger Recognition Object
+        self.ch = 0 
 
     # To fetch the image of the computer run and placing it in the output frame
 
@@ -220,42 +225,34 @@ class Game:
         
         return output, computer
 
-    # Initializing the user run to None and then changing it when the finger is recognized
+    # Main Game loop
 
-    #def play(self, delay = 0, text = "",frame_new =''):          # Delay counter to perform certain tasks at specified time                                
     def play(self, frame_new):    
-        finger = FingerRecognition()                            # Finger Recognition Object
-        temp_list = []
-
-        #while True:
-        #self.delay = delay
-        #ret, img = self.cap.read()              # Read the image
+        delay = self.delay              # Delay counter to perform certain tasks at specified time 
         img = frame_new
-        img = cv2.flip(img, 1)                  # Flipping the image
-        player = 'SELF'    
-        user = None         
+        img = cv2.flip(img, 1)       
+        user = None                     # Initializing the user run to None and then changing it when the finger is recognized  
+        self.run = []  
         
         icon = cv2.imread('gestureGames/static/1-6.jpg')            # Header Image in the webscreen
         icon = cv2.resize(icon, (640,120))
         img[0:120, 0:] = icon
         font_style = cv2.FONT_HERSHEY_PLAIN                       
                 
-        if self.delay >= 0 and self.delay <= 20:
-            self.text = "Ready?"
-        elif self.delay < 40:
-            self.text = "Set!"
-        elif self.delay < 70:
-            self.text = "Show your run now!"
-            temp_list = []
-            img, results = finger.detectHandLandmarks(img, draw = False, display = True)    # Detecting hand landmarks form the image
+        if delay >= 0 and delay <= 20:
+            text = "Ready?"
+        elif delay < 40:
+            text = "Set!"
+        elif delay < 70:
+            text = "Show your run now!"
+            img, results = self.finger.detectHandLandmarks(img, draw = False, display = True)    # Detecting hand landmarks form the image
 
             if results.multi_hand_landmarks:                                                # Obtaining the finger count
-                img, finger_count, final_count = finger.countFingers(img, results, start = self.start, replay = self.replay, draw = True, display = True)
+                img, finger_count, final_count = self.finger.countFingers(img, results, start = self.start, replay = self.replay, draw = True, display = True)
                 user = final_count
                 
             if user != None:
-                self.text = ""
-                temp_list.append(user)
+                text = ""
                 img, computer = self.computer_score(img, user)
 
                 if self.flag_comp == True:
@@ -267,64 +264,13 @@ class Game:
                 else: 
                     txt = 'playing'
 
-        elif self.delay < 100:
-            if temp_list == []:
-                self.text = "You missed it...Try again!!"
+                self.run = [user, computer, txt]
 
-        # Displaying certain messages in the webcam screen
+        elif delay < 100:
+            if self.run == []:
+                text = "You missed it...Try again!!"
 
-        if self.win_status != "":
-            self.replay = True
-
-        if self.win_status == '':
-            if self.start == True:
-                self.text = "   "
-                cv2.rectangle(img, (0, 0), (640,150), (220,220,220), cv2.FILLED)
-                cv2.putText(img, "Gesture Cricket",(50, 70), fontFace = 4, fontScale = 2, color = (106,51,170), thickness = 3)
-                cv2.putText(img, "Do you choose Batting or Bowling?",(30, 110), fontFace = 1, fontScale = 2, color = (106,51,170), thickness = 1)
-                cv2.putText(img, "Batting (Show 1)",(60, 140), fontFace = 1, fontScale = 1, color = (106,51,170), thickness = 1)
-                cv2.putText(img, "Bowling (Show 2)",(380, 140), fontFace = 1, fontScale = 1, color = (106,51,170), thickness = 1)
-                
-            else:
-                alpha = 0.3
-                over = img.copy()
-                cv2.rectangle(over, (0, 400), (640,480), (220,220,220), cv2.FILLED)
-                img = cv2.addWeighted(over, alpha, img, 1-alpha, 0)
-                cv2.putText(img, self.text, (20, 160), font_style, 2, (0, 255, 255), 2,2)
-                cv2.putText(img, 'CURRENT', (100, 420), font_style, 1, (0, 0, 0), 2)
-                cv2.putText(img, f'{self.current}', (100, 470), font_style, 4, (0, 0, 128), 3)
-                cv2.putText(img, f'INNINGS {self.innings}', (250, 430), font_style, 2, (0, 0, 0), 2)
-                cv2.putText(img, f'{self.status}', (250, 470), font_style, 2, (0, 0, 128), 2)
-                cv2.putText(img, 'TARGET', (500, 420), font_style, 1, (0, 0, 0), 2)
-                cv2.putText(img, f'{self.target}', (500, 470), font_style, 4, (0, 0, 128), 3)
-
-        elif self.win_status != "" and self.replay == True:
-            self.text = "   "
-            cv2.rectangle(img, (0, 0), (640,150), (220,220,220), cv2.FILLED)
-            if self.win_status == 'Tie!':
-                cv2.putText(img, f"{self.win_status}",(150, 80), fontFace = 4, fontScale = 3, color = (128,0,128), thickness = 3)
-            else:
-                cv2.putText(img, f"{self.win_status}",(70, 80), fontFace = 4, fontScale = 3, color = (128,0,128), thickness = 3)
-            cv2.putText(img, "Play Again (Show Thumbs Up)",(60, 120), fontFace = 1, fontScale = 1, color = (128,0,128), thickness = 1)
-            cv2.putText(img, "Exit (Show Five)",(380, 120), fontFace = 1, fontScale = 1, color = (128,0,128), thickness = 1)
-                
-        if self.out == True and self.replay == False and self.start == False:
-            cv2.rectangle(img, (0, 190), (640,400), (220,220,220), cv2.FILLED)
-            cv2.putText(img, "OUT!!",(230, 280), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
-
-            if self.innings == 1:
-                cv2.rectangle(img, (0, 120), (640,190), (220,220,220), cv2.FILLED)
-                cv2.putText(img, "INNINGS 2",(170, 380), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
-            elif self.innings == 2:
-                cv2.rectangle(img, (0, 400), (640,480), (220,220,220), cv2.FILLED)
-                cv2.putText(img, "GAME OVER",(170, 380), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
-    
-        
-        #cv2.imshow('Hand Cricket', img)              # Displaying the webcam Screen
-        self.delay = (self.delay + 1) % 100 
-
-        if self.replay == True and temp_list != []:
-            self.run = [temp_list[-1], computer, txt]
+        if self.replay == True and self.run != []:
             if self.run[0] == 6:
                 self.start = True
                 self.replay = False
@@ -333,14 +279,15 @@ class Game:
                 self.target = 0
                 self.current = 0
                 self.innings = 1
-            
+
+            elif self.run[0] == 5:
+                self.cap.release()
+
         if self.start == True:
             self.win_status = ""
             self.replay = False
-            self.ch = 0
 
-            if temp_list != []:
-                self.run = [temp_list[-1], computer, txt]
+            if self.run != []:
                 if self.run[0] == 1:
                     self.ch = 1
                     self.status = "You Bat"
@@ -351,15 +298,34 @@ class Game:
             if self.ch == 1 or self.ch == 2:
                 self.start = False
                 self.run = []
-                temp_list = []
-                self.delay = 0
+                delay = 0
 
-        if self.start == False and self.replay == False and self.out == True and self.delay == 50:
-            self.innings += 1
+        if self.start == False and self.replay == False and self.out == True and delay == 50:
+            if self.innings == 1:
+                self.innings += 1
+                self.out = False
+
+        if self.innings == 2 and self.out == True:
+            if self.ch == 1:
+                if self.current >= self.target:
+                    txt = 'You Lose!'   
+                elif self.current == (self.target - 1):
+                    txt = 'Tie!'
+                else:
+                    txt = 'You Win!!'
+            elif self.ch == 2:
+                if self.current >= self.target:
+                    txt = 'You Win!!'
+                elif self.current == (self.target - 1):
+                    txt = 'Tie!'
+                else:
+                    txt = 'You Lose!'
+            self.win_status = txt
+            self.run = []
             self.out = False
-
-        if self.start == False and self.delay == 70 and temp_list != []:
-            self.run = [temp_list[-1], computer, txt]
+            self.replay = True
+            
+        if self.start == False and delay == 65 and self.run != []:
             self.flag_comp = True
 
             if self.run[-1] == 'stop':
@@ -372,25 +338,6 @@ class Game:
                         self.status = 'You Bat'
                     self.target = self.current + 1
                     self.current = 0
-                    self.run = []
-
-                if self.innings == 2:
-                    if self.ch == 1:
-                        if self.current >= self.target:
-                            txt = 'You Lose!'   
-                        elif self.current == (self.target - 1):
-                            txt = 'Tie!'
-                        else:
-                            txt = 'You Win!!'
-                    elif self.ch == 2:
-                        if self.current >= self.target:
-                            txt = 'You Win!!'
-                        elif self.current == (self.target - 1):
-                            txt = 'Tie!'
-                        else:
-                            txt = 'You Lose!'
-                    self.win_status = txt
-                    self.run = []
 
             if self.innings == 1 and self.out != True:
                 if self.ch == 1:
@@ -421,18 +368,67 @@ class Game:
                         txt = 'You Lose!'
 
                 self.win_status = txt
-                self.run = []
+                self.replay = True
 
-            self.delay = 0
-            temp_list = []
+            delay = 0
+            self.run = []
 
-        if (self.replay == True and temp_list != []):
-            self.run = [temp_list[-1], computer, txt]
-            if self.run[0] == 5:
-                self.cap.release()
+        # Displaying certain messages in the webcam screen
+        if self.win_status != "" and self.out == False:
+                self.replay = True
+
+        if self.win_status == '':
+            if self.start == True:
+                text = "   "
+                cv2.rectangle(img, (0, 0), (640,150), (220,220,220), cv2.FILLED)
+                cv2.putText(img, "Hand Cricket",(100, 70), fontFace = 4, fontScale = 2, color = (106,51,170), thickness = 3)
+                cv2.putText(img, "Do you choose Batting or Bowling?",(30, 110), fontFace = 1, fontScale = 2, color = (106,51,170), thickness = 1)
+                cv2.putText(img, "Batting (Show 1)",(60, 140), fontFace = 1, fontScale = 1, color = (106,51,170), thickness = 1)
+                cv2.putText(img, "Bowling (Show 2)",(380, 140), fontFace = 1, fontScale = 1, color = (106,51,170), thickness = 1)
+                
+            else:
+                alpha = 0.3
+                over = img.copy()
+                cv2.rectangle(over, (0, 400), (640,480), (220,220,220), cv2.FILLED)
+                img = cv2.addWeighted(over, alpha, img, 1-alpha, 0)
+                cv2.putText(img, text, (20, 160), font_style, 2, (0, 255, 255), 2,2)
+                cv2.putText(img, 'CURRENT', (100, 420), font_style, 1, (0, 0, 0), 2)
+                cv2.putText(img, f'{self.current}', (100, 470), font_style, 4, (0, 0, 128), 3)
+                cv2.putText(img, f'INNINGS {self.innings}', (250, 430), font_style, 2, (0, 0, 0), 2)
+                cv2.putText(img, f'{self.status}', (250, 470), font_style, 2, (0, 0, 128), 2)
+                cv2.putText(img, 'TARGET', (500, 420), font_style, 1, (0, 0, 0), 2)
+                cv2.putText(img, f'{self.target}', (500, 470), font_style, 4, (0, 0, 128), 3)
+
+        elif self.win_status != "" and self.replay == True:
+            text = "   "
+            cv2.rectangle(img, (0, 0), (640,150), (220,220,220), cv2.FILLED)
+            if self.win_status == 'Tie!':
+                cv2.putText(img, f"{self.win_status}",(200, 80), fontFace = 4, fontScale = 3, color = (128,0,128), thickness = 3)
+            else:
+                cv2.putText(img, f"{self.win_status}",(70, 80), fontFace = 4, fontScale = 3, color = (128,0,128), thickness = 3)
+            cv2.putText(img, "Play Again (Show Thumbs Up)",(60, 120), fontFace = 1, fontScale = 1, color = (128,0,128), thickness = 1)
+            cv2.putText(img, "Exit (Show Five)",(380, 120), fontFace = 1, fontScale = 1, color = (128,0,128), thickness = 1)
+                
+        if self.out == True and self.replay == False and self.start == False:
+            cv2.rectangle(img, (0, 190), (640,400), (220,220,220), cv2.FILLED)
+            cv2.putText(img, "OUT!!",(230, 280), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
+
+            if self.innings == 1:
+                cv2.rectangle(img, (0, 120), (640,190), (220,220,220), cv2.FILLED)
+                cv2.putText(img, "INNINGS 2",(170, 380), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
+            elif self.innings == 2:
+                cv2.rectangle(img, (0, 120), (640,190), (220,220,220), cv2.FILLED)
+                cv2.rectangle(img, (0, 400), (640,480), (220,220,220), cv2.FILLED)
+                cv2.putText(img, "GAME OVER",(170, 380), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
+
+        
                 
         if (cv2.waitKey(1) & 0xFF == ord('q')):               # Closing web cam if key q is pressed.
             self.cap.release()
+
+        delay = (delay + 1) % 100    
+        self.delay = delay
+
         return img
                 
 
